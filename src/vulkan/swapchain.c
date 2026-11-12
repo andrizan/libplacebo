@@ -594,7 +594,16 @@ caps_ready:
         {VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR,         PL_ALPHA_UNKNOWN},
     };
 
+    // Only let the compositor blend the swapchain's alpha channel if the user
+    // asked for alpha bits. Otherwise the window is meant to be opaque, and a
+    // blended mode makes it translucent as soon as anything else (e.g. an
+    // overlay hooking the present path) leaves alpha below 1.
+    const bool opaque_only = !p->params.alpha_bits &&
+        (caps.supportedCompositeAlpha & VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR);
+
     for (int i = 0; i < PL_ARRAY_SIZE(alphaModes); i++) {
+        if (opaque_only && alphaModes[i].vk_mode != VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR)
+            continue;
         if (caps.supportedCompositeAlpha & alphaModes[i].vk_mode) {
             info->compositeAlpha = alphaModes[i].vk_mode;
             p->color_repr.alpha = alphaModes[i].pl_mode;
